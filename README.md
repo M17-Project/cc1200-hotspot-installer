@@ -1,6 +1,6 @@
 # M17 CC1200 Hotspot Installation Script
 
-This repository contains a Bash script to convert a Raspberry Pi (with a CC1200 hat) into a fully functional **M17 digital voice hotspot**. The script automates the entire installation and setup process, including compiling the necessary software, configuring UART, setting up the web dashboard, and flashing the firmware to the CC1200 HAT (optional).
+This repository contains a Bash script to convert a Raspberry Pi (with a CC1200 or MMDVM hat) into a fully functional **M17 digital voice hotspot**. The script automates the entire installation and setup process, including compiling the necessary software, configuring UART, setting up the web dashboard, and flashing the firmware to the HAT (optional).
 
 ---
 
@@ -30,10 +30,12 @@ sudo ./cc1200-hotspot-installer.sh
 - Clones and compiles the following M17 Project repositories:
   - [libm17](https://github.com/M17-Project/libm17)
   - [CC1200_HAT-fw](https://github.com/M17-Project/CC1200_HAT-fw) (firmware flashing optional)
+  - [MMDVM](https://github.com/M17-Project/MMDVM) (firmware flashing optional)
+  - [MMDVM_HS](https://github.com/M17-Project/MMDVM_HS) (firmware flashing optional)
   - [rpi-dashboard](https://github.com/M17-Project/rpi-dashboard) (web interface)
 - Installs [m17-gateway](https://github.com/jancona/m17)
 - Configures NGINX and PHP-FPM to serve the dashboard
-- Optionally flashes/updates the CC1200 firmware via stm32flash
+- Optionally flashes/updates the CC1200 or MMDVM HAT firmware via stm32flash
 
 ---
 
@@ -52,7 +54,7 @@ Other Pi models or OS versions may work but are **not officially supported**.
 
 - Fresh install of Raspberry Pi OS Bookworm **Lite (64-bit)**
 - Raspberry Pi with internet access
-- CC1200 HAT connected
+- CC1200 or MMDVM HAT connected
 - Run the script as **root**
 
 ---

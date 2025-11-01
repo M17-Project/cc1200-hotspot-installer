@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# cc1200-hotspot-installer.sh - M17 Hotspot Installation Script for Raspberry Pi with CC1220 HAT
+# m17-hotspot-installer.sh - M17 Hotspot Installation Script for Raspberry Pi with CC1220 or MMDVM HAT
 #
 # Author: DK1MI <dk1mi@qrz.is>
 # License: GNU General Public License v3.0 (GPLv3)
@@ -63,6 +63,39 @@ update_hostfile() {
     fi
 }
 
+flash_firmware() {
+    # It would be nice to add moodem type detection here
+    # Start with a limited list of modems and add more as people test them.
+    firmware=( \
+        "No option 0" \
+        "CC1200_HAT-fw/Release/CC1200_HAT-fw.bin" \
+        "MMDVM_HS/release/MMDVM_HS_Hat.bin" \
+        "MMDVM_HS/release/MMDVM_HS_Dual_Hat.bin" \
+        "MMDVM_HS/release/generic_gpio.bin" \
+        "MMDVM_HS/release/generic_duplex_gpio.bin" \
+        "MMDVM/release/Repeater-Builder_v3.bin" \
+        "MMDVM/release/Repeater-Builder_v4.bin" \
+        "MMDVM/release/Repeater-Builder_v5.bin" \
+    )
+    HW=0
+    while [ $HW -lt 1 -o $HW -gt 8 ]
+    do 
+        echo "Please select your hardware type:"
+        echo "1) CC1200"
+        echo "2) MMDVM_HS_Hat"
+        echo "3) MMDVM_HS_Dual_Hat"
+        echo "4) generic_gpio"
+        echo "5) generic_duplex_gpio"
+        echo "6) Repeater-Builder_v3"
+        echo "7) Repeater-Builder_v4"
+        echo "8) Repeater-Builder_v5"
+        read -rp "Enter your choice (1-8): " HW
+    done
+
+    echo "⚡ Flashing firmware to HAT..."
+    stm32flash -v -R -i "-532&-533&532,533,:-532,-533,533" -w "$M17_HOME/${firmware[$HW]}" /dev/ttyAMA0
+}
+
 run_update() {
     echo "🔄 Updating software as $M17_USER..."
 
@@ -79,6 +112,14 @@ cd "$M17_HOME/CC1200_HAT-fw"
 echo "📥 Updating CC1200_HAT-fw..."
 git pull
 
+cd "$M17_HOME/MMDVM"
+echo "📥 Updating MMDVM firmware..."
+git pull
+
+cd "$M17_HOME/MMDVM_HS"
+echo "📥 Updating MMDVM_HS firmware..."
+git pull
+
 cd "$M17_HOME/rpi-dashboard"
 echo "📥 Updating rpi-dashboard..."
 git pull
@@ -92,6 +133,12 @@ EOF
         | xargs -I {} curl -L -o /tmp/m17-gateway.deb {}
 
     systemctl stop m17-gateway.service
+
+    # Optionally flash firmware
+    read -rp "💾 Do you want to flash the latest firmware to the HAT? (Y/n): " FLASH_CONFIRM
+    if [[ "$FLASH_CONFIRM" == "Y" ]]; then
+        flash_firmware
+    fi
 
     dpkg -i /tmp/m17-gateway.deb
 
@@ -224,6 +271,7 @@ echo "User '$M17_USER' has been added to the 'dialout' and 'gpio' groups."
 sudo -u "$M17_USER" bash <<EOF
 set -e
 cd "$M17_HOME"
+# Any reason to do this?
 echo "📥 Cloning libm17..."
 git clone https://github.com/M17-Project/libm17.git
 cd libm17
@@ -234,13 +282,16 @@ sudo cmake --install build
 echo "📥 Cloning CC1200_HAT-fw..."
 cd "$M17_HOME"
 git clone https://github.com/M17-Project/CC1200_HAT-fw.git
+echo "📥 Cloning MMDVM..."
+git clone https://github.com/M17-Project/MMDVM.git
+echo "📥 Cloning MMDVM_HS..."
+git clone https://github.com/M17-Project/MMDVM_HS.git
 EOF
 
 # 8. Optionally flash firmware
-read -rp "💾 Do you want to flash the latest CC1200 firmware to the HAT? (Y/n): " FLASH_CONFIRM
+read -rp "💾 Do you want to flash the latest firmware to the HAT? (Y/n): " FLASH_CONFIRM
 if [[ "$FLASH_CONFIRM" == "Y" ]]; then
-    echo "⚡ Flashing firmware to CC1200 HAT..."
-    stm32flash -v -R -i "-532&-533&532,533,:-532,-533,533" -w "$M17_HOME/CC1200_HAT-fw/Release/CC1200_HAT-fw.bin" /dev/ttyAMA0
+    flash_firmware
 fi
 
 # 9. Install dashboard
@@ -286,7 +337,15 @@ systemctl restart nginx
 # 11. Install M17 Gateway and configure links
 echo "📥 Downloading and installing m17-gateway..."
 curl -s https://api.github.com/repos/jancona/m17/releases/latest | jq -r '.assets[].browser_download_url | select(. | contains("_arm64.deb") and contains("m17-gateway"))' | xargs -I {} curl -L -o /tmp/m17-gateway.deb {}
-dpkg -i /tmp/m17-gateway.deb
+
+# Avoid intermittent dpkg frontend lock errors
+set +e
+for i in $(seq 1 5); do
+    [ $i -gt 1 ] && sleep 2
+    dpkg -i /tmp/m17-gateway.deb && s=0 && break || s=$?
+done
+set -e
+(exit $s)
 
 echo "👥 Adding 'www-data' to 'm17-gateway-control' group..."
 usermod -aG m17-gateway-control www-data
@@ -323,5 +382,5 @@ IP_ADDRESS=$(hostname -I | awk '{print $1}')
 # 12. Final Instructions
 echo -e "\n🎉 All done! PLEASE REBOOT YOUR RASPBERRY NOW!"
 echo -e "\nAfter the reboot, open your browser and go to: http://$IP_ADDRESS/"
-echo -e "\nThere, click on 'Gateway Config' to configure your node (call sign, frequency etc)."
-echo -e "You will find further information under 'Help' in the dashboard."
+echo -e "\nThere, click on 'Gateway Config' to configure your node (call sign, frequency etc). If you have an MMDVM HAT, you must also change Type in the [Modem] section from cc1200 to mmdvm."
+echo -e "\nYou will find further information under 'Help' in the dashboard."

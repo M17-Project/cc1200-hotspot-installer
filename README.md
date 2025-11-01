@@ -15,8 +15,8 @@ wget https://raw.githubusercontent.com/M17-Project/cc1200-hotspot-installer/refs
 Carefully read the script before you execute it with:
 
 ```
-chmod u+x cc1200-hotspot-installer.sh
-sudo ./cc1200-hotspot-installer.sh
+chmod u+x m17-hotspot-installer.sh
+sudo ./m17-hotspot-installer.sh
 ```
 
 ## Features

@@ -110,9 +110,10 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-# Check for Raspberry Pi OS Bookworm
-if ! grep -q "bookworm" /etc/os-release; then
-    echo "❌ This script is intended for Raspberry Pi OS Bookworm only."
+
+# Check for Raspberry Pi OS Bookworm or Trixie
+if ! grep -q "trixie\|bookworm" /etc/os-release; then
+    echo "❌ This script is intended for Raspberry Pi OS Bookworm or Trixie only."
     exit 1
 fi
 
@@ -240,7 +241,11 @@ update_hostfile
 # Configure Nginx and PHP
 echo "🛠️  Configuring nginx and PHP..."
 systemctl enable nginx
-systemctl enable php8.2-fpm || true
+if grep -q "bookworm" /etc/os-release; then
+    systemctl enable php8.2-fpm
+else
+    systemctl enable php8.4-fpm
+fi
 
 if ! grep -q 'root /opt/m17/rpi-dashboard' "$NGINX_DEFAULT"; then
     tee "$NGINX_DEFAULT" > /dev/null << 'EOF'

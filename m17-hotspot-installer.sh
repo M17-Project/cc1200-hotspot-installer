@@ -100,6 +100,10 @@ flash_firmware() {
     fi
 }
 
+usage() {
+    echo "Usage: sudo $0 [-n]"
+}
+
 # Must be run as root
 if [[ $EUID -ne 0 ]]; then
     echo "❌ This script must be run as root. Please use sudo."
@@ -111,6 +115,14 @@ if ! grep -q "bookworm" /etc/os-release; then
     echo "❌ This script is intended for Raspberry Pi OS Bookworm only."
     exit 1
 fi
+
+# Check for -n (don't flash) option
+while getopts "n" opt; do
+    case $opt in
+        n) flash='n' ;;
+        *) usage; exit 1 ;;
+    esac
+done
 
 # Update and check if reboot is needed
 echo "📦 Updating system packages..."
@@ -201,10 +213,14 @@ fi
 EOF
 
 # Optionally flash firmware
-read -rp "💾 Do you want to flash the latest firmware to the HAT? (Y/n): " FLASH_CONFIRM
-if [[ "$FLASH_CONFIRM" == "Y" || "$FLASH_CONFIRM" == "y" ]]; then
-    flash_firmware
-fi
+case $flash in
+    n) ;;
+    *) read -rp "💾 Do you want to flash the latest firmware to the HAT? (Y/n): " FLASH_CONFIRM
+        if [[ "$FLASH_CONFIRM" == "Y" || "$FLASH_CONFIRM" == "y" ]]; then
+            flash_firmware
+        fi
+    ;;
+esac
 
 # Install dashboard
 sudo -u "$M17_USER" bash <<EOF

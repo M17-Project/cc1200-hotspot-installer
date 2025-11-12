@@ -60,12 +60,6 @@ update_hostfile() {
 flash_firmware() {
     # It would be nice to add modem type detection here
     # Start with a limited list of modems and add more as people test them.
-    systemctl list-unit-files m17-gateway.service >/dev/null
-    exists=$?
-    if [ $exists ]; then
-        systemctl stop m17-gateway.service
-    fi
-
     firmware=( \
         "No option 0" \
         "CC1200_HAT-fw/Release/CC1200_HAT-fw.bin" \
@@ -94,10 +88,6 @@ flash_firmware() {
 
     echo "⚡ Flashing firmware to HAT..."
     stm32flash -v -R -i "-532&-533&532,533,:-532,-533,533" -w "$M17_HOME/${firmware[$HW]}" /dev/ttyAMA0
-
-    if [ $exists ]; then
-        systemctl start m17-gateway.service
-    fi
 }
 
 usage() {
@@ -212,6 +202,15 @@ else
     git pull
 fi
 EOF
+
+# Stop m17-gateway if it's running
+set +e
+systemctl stop m17-gateway.service >/dev/null 2>&1
+if [ $? -eq 0 ]; then 
+    echo "Stopped m17-gateway service"
+    restart=true
+fi
+set -e
 
 # Optionally flash firmware
 case $flash in
@@ -334,6 +333,12 @@ ln -sf /etc/m17-gateway.ini /opt/m17/rpi-dashboard/files/m17-gateway.ini
 if [ -f $M17_HOME/m17-gateway/dashboard.log ]; then
     # Ensure dashboard.log is accessible
     chmod 644 $M17_HOME/m17-gateway/dashboard.log
+fi
+
+# Restart m17-gateway if we stopped it
+if [ "$restart" = true ]; then
+    echo "Restarting m17-gateway service"
+    systemctl start m17-gateway.service
 fi
 
 IP_ADDRESS=$(hostname -I | awk '{print $1}')

@@ -314,8 +314,8 @@ if [ ! -f /opt/m17/rpi-dashboard/files/OverrideHosts.txt ]; then
 fi
 
 echo "Making /opt/m17/rpi-dashboard/ writable for www-data..."
-chgrp www-data /opt/m17/rpi-dashboard/
-chmod g+w /opt/m17/rpi-dashboard/
+chgrp -R www-data /opt/m17/rpi-dashboard/
+chmod -R g+w /opt/m17/rpi-dashboard/
 
 if ! grep -q 'HostFile=/opt/m17/rpi-dashboard/files/M17Hosts.txt' /etc/m17-gateway.ini; then
     echo "Updating m17-gateway.ini..."
